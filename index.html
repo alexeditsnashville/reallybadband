@@ -3,7 +3,7 @@ const completed = new Set();
 
 function handleLoops() {
   // Check each hallway to see if player is at the end
-  hallways.forEach(h => {
+  for (const h of hallways) {
     if (h.trigger && h.trigger.containsPoint(camera.position)) {
       // Mark this department as visited
       completed.add(h.deptKey);
@@ -16,8 +16,11 @@ function handleLoops() {
         // Not all departments visited - teleport back to lobby seamlessly
         teleportToLobby();
       }
+      
+      // Exit early to prevent multiple triggers firing in same frame
+      return;
     }
-  });
+  }
 }
 
 function teleportToLobby() {
