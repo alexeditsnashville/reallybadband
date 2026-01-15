@@ -794,8 +794,10 @@
       if (chamberBuilt) return;
       chamberBuilt = true;
 
-      // Chamber starts AFTER the orientation room copies at the hallway ends
-      const chamberStartZ = ORIENT.z + ORIENT.d/2 + HALL.len + ORIENT.d; // After hallway ends + orientation copy
+      // Chamber starts AFTER the shared orientation room copy at the hallway ends
+      // Formula: main orientation north wall + hallway length + orientation copy depth
+      // = (ORIENT.z + ORIENT.d/2) + HALL.len + ORIENT.d
+      const chamberStartZ = ORIENT.z + ORIENT.d/2 + HALL.len + ORIENT.d;
       const chamberW = 40;
       const chamberD = CHAMBER_D;
       const chamberH = 3.2; // taller than hallways for dramatic effect
@@ -980,8 +982,8 @@
     
     // Build shared orientation room copy at the end of all three hallways
     // This creates the "infinite loop" illusion - all hallways lead to the same copy
-    const hallEndZ = ORIENT.z + ORIENT.d/2 + HALL.len; // Where hallways end (z=108)
-    const orientCopyZ = hallEndZ + ORIENT.d/2; // Center of copy (z=115)
+    const hallEndZ = ORIENT.z + ORIENT.d/2 + HALL.len; // Where hallways end
+    const orientCopyZ = hallEndZ + ORIENT.d/2; // Center of copy
     buildOrientationRoom(orientCopyZ, true, true, false); // isMainRoom=false
     
     buildElevator();
@@ -1200,7 +1202,7 @@ function applyStance(){
           if(completed.size === 3 && !completionTriggered){
             completionTriggered = true;
             
-            // Build the massive chamber (it appears beyond the orientation copies)
+            // Build the massive chamber (it appears beyond the shared orientation copy)
             buildMassiveChamber();
             
             // Highlight center accent wall to draw attention
@@ -1210,8 +1212,8 @@ function applyStance(){
             }
           }
           
-          // No teleportation - player walks naturally through orientation copies
-          // The copies create the infinite loop illusion by showing C/S/P hallways again
+          // No teleportation - player walks naturally through the shared orientation copy
+          // The copy creates the infinite loop illusion by showing C/S/P hallways again
           
           return;
         }
