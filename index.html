@@ -115,7 +115,9 @@
     const ACCEL = 18.0;
     const DAMP = 11.0;
     
+    const CORRIDOR_OPENING_W = 4.6; // Width of openings between rooms
     const TELEPORT_OFFSET = 1.5; // Distance from orientation room entrance when teleporting
+    const TELEPORT_Z = ORIENT.z - ORIENT.d/2 + TELEPORT_OFFSET; // Calculated teleport position
     const BOUNDS_X_MIN = -22;
     const BOUNDS_X_MAX = 22;
     const BOUNDS_Z_MIN = -28;
@@ -639,8 +641,8 @@
       
       // South wall (entrance) - main room has opening from transition corridor, copies are open for hallway
       if (isMainRoom) {
-        // Opening for transition corridor (centered, 4.4 units wide like corridor)
-        const openingW = 4.6;
+        // Opening for transition corridor (centered, same width as corridor)
+        const openingW = CORRIDOR_OPENING_W;
         const leftLen = (-openingW/2) - (-ORIENT.w/2);
         if (leftLen > 0.25) wallBox((-ORIENT.w/2) + leftLen/2, cy, startZ, leftLen, CEIL_H, WALL_T, mat.offWhite);
         const rightLen = (ORIENT.w/2) - (openingW/2);
@@ -650,7 +652,7 @@
       
       // North wall with 3 openings for C, S, P hallways
       const northZ = endZ;
-      const openingW = 4.6;
+      const openingW = CORRIDOR_OPENING_W;
       const spans = [HALL_X.COMPLIANCE, HALL_X.SURVEILLANCE, HALL_X.PURSUANCE]
         .map(x => ({a: x - openingW/2, b: x + openingW/2}))
         .sort((p, q) => p.a - q.a);
@@ -1211,8 +1213,7 @@ function applyStance(){
           } else if (completed.size < 3) {
             // Teleport back to main orientation room (creates the loop illusion)
             // Position player at south side of main orientation room, facing north
-            // This makes it appear they've walked into an orientation room copy
-            camera.position.set(0, STAND_Y, ORIENT.z - ORIENT.d/2 + TELEPORT_OFFSET);
+            camera.position.set(0, STAND_Y, TELEPORT_Z);
             yaw = Math.PI; // Face north (into orientation room)
             yawTarget = yaw;
             pitch = 0;
