@@ -1003,25 +1003,30 @@
       elev.right.position.x = ELEV.x + hatchW/4 + openAmt*(hatchW*0.30);
     }
 
-    // ---- Hall looping ----
+     // ---- Hall looping ----
     function handleLoops(){
       for(const h of hallwayInfo){
-        if(h.trigger.containsPoint(camera.position)){
-          if(!completed.has(h.deptKey)){
+        if(h.trigger. containsPoint(camera.position)){
+          if(! completed.has(h. deptKey)){
             completed.add(h.deptKey);
             saveCompletion();
             cp.hallKey=h.deptKey;
             updateCP();
           }
-          // teleport to lobby start (no elevator)
-          camera.position.set(0, CROUCH_Y, (LOBBY.d/2) - 1.8);
-          yaw=Math.PI;
-          vel.set(0,0,0);
+          // Check if all 3 departments are complete
+          if(completed.size === 3){
+            // Show the massive chamber! 
+            showMassiveChamber();
+          } else {
+            // Teleport back to lobby for the infinite hallway illusion
+            camera.position.set(0, CROUCH_Y, (LOBBY. d/2) - 1. 8);
+            yaw=Math.PI;
+            vel.set(0,0,0);
+          }
           return;
         }
       }
     }
-
     // ---- CP shimmer ----
     function updateCPGlow(t){
       if(!cpGroup.visible || !cp.neon) return;
