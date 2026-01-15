@@ -1,3 +1,32 @@
+// Department tracking
+const TOTAL_DEPARTMENTS = 3;
+let visitedDepartments = new Set();
+
+function handleLoops(hallwayNumber) {
+  // Mark the current department as visited
+  visitedDepartments.add(hallwayNumber);
+  
+  // Check if all departments have been completed
+  if (visitedDepartments.size >= TOTAL_DEPARTMENTS && hallwayNumber === TOTAL_DEPARTMENTS) {
+    // All departments completed, exiting final hallway - show massive chamber
+    showMassiveChamber();
+  } else {
+    // Incomplete departments or exiting hallways 1-2: teleport back to lobby
+    teleportToLobby();
+  }
+}
+
+function teleportToLobby() {
+  // Reset player position to lobby (seamlessly)
+  // This creates the illusion of a new lobby
+  camera.position.set(0, STAND_Y, 0);
+  yaw = 0;
+  pitch = 0;
+  vel.set(0, 0, 0);
+  crouchToggle = false;
+  crouchHold = false;
+}
+
 function showMassiveChamber(){
   const chamberH = 30.5;
   const chamberW = 20;
