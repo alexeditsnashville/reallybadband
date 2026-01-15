@@ -111,12 +111,20 @@
     let PLAYER_HALF_H = 0.25;
 
     const WALK = 3.0;
-    const SPRINT = 8.5;
+    const SPRINT = 15.0;  // Updated from 8.5
     const ACCEL = 18.0;
     const DAMP = 11.0;
+    
+    const CORRIDOR_OPENING_W = 4.6; // Width of openings between rooms
+    const TELEPORT_OFFSET = 1.5; // Distance from orientation room entrance when teleporting
+    const TELEPORT_Z = ORIENT.z - ORIENT.d/2 + TELEPORT_OFFSET; // Calculated teleport position
+    const BOUNDS_X_MIN = -22;
+    const BOUNDS_X_MAX = 22;
+    const BOUNDS_Z_MIN = -28;
+    const BOUNDS_Z_MAX = 150; // Extended to allow chamber exploration
 
     const ELEV = { x:0, z:-19.5, w:2.05, d:1.70 };
-    const LOBBY = { x:0, z:0, w:30, d:20 };
+    const ORIENT = { x:0, z:5, w:30, d:14 }; // Orientation Room (replaces LOBBY)
     const HALL = { len:96, w:6.2, doors:10 };
     const HALL_X = { COMPLIANCE:-10, SURVEILLANCE:0, PURSUANCE:10 };
 
@@ -611,57 +619,91 @@
       else d.mesh.position.addScaledVector(dir,-0.70);
     }
 
-    function buildLobby(){
-      // lobby floor/ceiling
-      floorPlane(0,0, LOBBY.w, LOBBY.d, mat.offWhite);
-      ceilPlane(0,0, LOBBY.w, LOBBY.d, CEIL_H, mat.ceiling);
-      const cy=CEIL_H/2;
-      // side walls
-      wallBox(-LOBBY.w/2,cy,0, WALL_T, CEIL_H, LOBBY.d, mat.offWhite);
-      wallBox( LOBBY.w/2,cy,0, WALL_T, CEIL_H, LOBBY.d, mat.offWhite);
-
-      // south wall with corridor opening
-      const southZ=-LOBBY.d/2;
-      const openW=5.0;
-      const leftLen=(-openW/2)-(-LOBBY.w/2);
-      if(leftLen>0.25) wallBox((-LOBBY.w/2)+leftLen/2,cy,southZ, leftLen, CEIL_H, WALL_T, mat.offWhite);
-      const rightLen=(LOBBY.w/2)-(openW/2);
-      if(rightLen>0.25) wallBox((openW/2)+rightLen/2,cy,southZ, rightLen, CEIL_H, WALL_T, mat.offWhite);
-
-      // north wall with 3 openings
-      const northZ=LOBBY.d/2;
-      const openingW=4.6;
-      const spans=[HALL_X.COMPLIANCE,HALL_X.SURVEILLANCE,HALL_X.PURSUANCE].map(x=>({a:x-openingW/2,b:x+openingW/2})).sort((p,q)=>p.a-q.a);
-      let cur=-LOBBY.w/2;
-      for(const s of spans){
-        const seg=s.a-cur;
-        if(seg>0.25) wallBox(cur+seg/2,cy,northZ, seg, CEIL_H, WALL_T, mat.offWhite);
-        cur=s.b;
+    function buildOrientationRoom(centerZ = ORIENT.z, withFloor = true, withCeiling = true, isMainRoom = true){
+      // Orientation room spans ORIENT.d units (z = centerZ-ORIENT.d/2 to centerZ+ORIENT.d/2)
+      const halfDepth = ORIENT.d/2;
+      const startZ = centerZ - halfDepth;
+      const endZ = centerZ + halfDepth;
+      
+      // Floor and ceiling
+      if (withFloor) {
+        floorPlane(ORIENT.x, centerZ, ORIENT.w, ORIENT.d, mat.offWhite);
       }
-      const tail=(LOBBY.w/2)-cur;
-      if(tail>0.25) wallBox(cur+tail/2,cy,northZ, tail, CEIL_H, WALL_T, mat.offWhite);
-
-      // lobby lights
-      for(let i=0;i<4;i++){
-        const z=-5+i*4;
-        const panel=new THREE.Mesh(new THREE.BoxGeometry(3.2,0.05,0.95), new THREE.MeshStandardMaterial({ color:0xffffff, roughness:0.25, metalness:0.0, emissive:0xffffff, emissiveIntensity:0.22 }));
-        panel.position.set(0,CEIL_H-0.16,z);
+      if (withCeiling) {
+        ceilPlane(ORIENT.x, centerZ, ORIENT.w, ORIENT.d, CEIL_H, mat.ceiling);
+      }
+      
+      const cy = CEIL_H/2;
+      
+      // Side walls
+      wallBox(-ORIENT.w/2, cy, centerZ, WALL_T, CEIL_H, ORIENT.d, mat.offWhite);
+      wallBox(ORIENT.w/2, cy, centerZ, WALL_T, CEIL_H, ORIENT.d, mat.offWhite);
+      
+      // South wall (entrance) - main room has opening from transition corridor, copies are open for hallway
+      if (isMainRoom) {
+        // Opening for transition corridor (centered, same width as corridor)
+        const openingW = CORRIDOR_OPENING_W;
+        const leftLen = (-openingW/2) - (-ORIENT.w/2);
+        if (leftLen > 0.25) wallBox((-ORIENT.w/2) + leftLen/2, cy, startZ, leftLen, CEIL_H, WALL_T, mat.offWhite);
+        const rightLen = (ORIENT.w/2) - (openingW/2);
+        if (rightLen > 0.25) wallBox((openingW/2) + rightLen/2, cy, startZ, rightLen, CEIL_H, WALL_T, mat.offWhite);
+      }
+      // For copies at hallway ends, no south wall (hallway connects directly)
+      
+      // North wall with 3 openings for C, S, P hallways
+      const northZ = endZ;
+      const openingW = CORRIDOR_OPENING_W;
+      const spans = [HALL_X.COMPLIANCE, HALL_X.SURVEILLANCE, HALL_X.PURSUANCE]
+        .map(x => ({a: x - openingW/2, b: x + openingW/2}))
+        .sort((p, q) => p.a - q.a);
+      
+      let cur = -ORIENT.w/2;
+      for (const s of spans) {
+        const seg = s.a - cur;
+        if (seg > 0.25) wallBox(cur + seg/2, cy, northZ, seg, CEIL_H, WALL_T, mat.offWhite);
+        cur = s.b;
+      }
+      const tail = (ORIENT.w/2) - cur;
+      if (tail > 0.25) wallBox(cur + tail/2, cy, northZ, tail, CEIL_H, WALL_T, mat.offWhite);
+      
+      // Lighting
+      for (let i = 0; i < 4; i++) {
+        const z = startZ + 2 + i * 3;
+        const panel = new THREE.Mesh(
+          new THREE.BoxGeometry(3.2, 0.05, 0.95),
+          new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            roughness: 0.25,
+            metalness: 0.0,
+            emissive: 0xffffff,
+            emissiveIntensity: 0.22
+          })
+        );
+        panel.position.set(0, CEIL_H - 0.16, z);
         world.add(panel);
-        const l=new THREE.PointLight(0xffffff,0.28,22,1.35);
-        l.position.set(0,CEIL_H-0.44,z);
+        
+        const l = new THREE.PointLight(0xffffff, 0.28, 22, 1.35);
+        l.position.set(0, CEIL_H - 0.44, z);
         scene.add(l);
       }
-
-      // department signage
-      addHeaderSign('COMPLIANCE', HALL_X.COMPLIANCE, northZ-0.24);
-      addHeaderSign('SURVEILLANCE', HALL_X.SURVEILLANCE, northZ-0.24);
-      addHeaderSign('PURSUANCE', HALL_X.PURSUANCE, northZ-0.24);
-
-      // Small transition corridor from lobby to elevator area (reduced from z=-9.0 to z=-4.0)
-      floorPlane(0,-2.0, 4.4, 4.0, mat.offWhite);
-      ceilPlane(0,-2.0, 4.4, 4.0, CEIL_H, mat.ceiling);
-      wallBox(-2.2,cy,-2.0, WALL_T, CEIL_H, 4.0, mat.offWhite);
-      wallBox( 2.2,cy,-2.0, WALL_T, CEIL_H, 4.0, mat.offWhite);
+      
+      // Department signage on north wall
+      addHeaderSign('COMPLIANCE', HALL_X.COMPLIANCE, northZ - 0.24);
+      addHeaderSign('SURVEILLANCE', HALL_X.SURVEILLANCE, northZ - 0.24);
+      addHeaderSign('PURSUANCE', HALL_X.PURSUANCE, northZ - 0.24);
+    }
+    
+    function buildElevatorTransition(){
+      // Small corridor connecting elevator to orientation room
+      const corridorZ = -5; // Between elevator exit and orientation room
+      const corridorW = 4.4;
+      const corridorD = 6; // From z=-8 to z=-2
+      const cy = CEIL_H/2;
+      
+      floorPlane(0, corridorZ, corridorW, corridorD, mat.offWhite);
+      ceilPlane(0, corridorZ, corridorW, corridorD, CEIL_H, mat.ceiling);
+      wallBox(-corridorW/2, cy, corridorZ, WALL_T, CEIL_H, corridorD, mat.offWhite);
+      wallBox(corridorW/2, cy, corridorZ, WALL_T, CEIL_H, corridorD, mat.offWhite);
     }
 
     const deptList=[
@@ -673,63 +715,80 @@
     const hallwayInfo=[];
 
     function buildHallway(dept){
-      const hallX=HALL_X[dept.key];
-      const startZ=LOBBY.d/2;
-      const endZ=startZ+HALL.len;
+      const hallX = HALL_X[dept.key];
+      const startZ = ORIENT.z + ORIENT.d/2; // Start at north wall of orientation room
+      const endZ = startZ + HALL.len;
+      
       // floor/ceil
-      floorPlane(hallX,startZ+HALL.len/2, HALL.w, HALL.len+0.4, dept.floor);
-      ceilPlane(hallX,startZ+HALL.len/2, HALL.w, HALL.len+0.4, CEIL_H, mat.ceiling);
-      const cy=CEIL_H/2;
-      // walls - remove end wall to allow chamber access
-      // wallBox(hallX,cy,endZ, HALL.w, CEIL_H, WALL_T, mat.offWhite);
-      wallBox(hallX-HALL.w/2,cy,startZ+HALL.len/2, WALL_T, CEIL_H, HALL.len+0.4, mat.offWhite);
-      wallBox(hallX+HALL.w/2,cy,startZ+HALL.len/2, WALL_T, CEIL_H, HALL.len+0.4, mat.offWhite);
+      floorPlane(hallX, startZ + HALL.len/2, HALL.w, HALL.len + 0.4, dept.floor);
+      ceilPlane(hallX, startZ + HALL.len/2, HALL.w, HALL.len + 0.4, CEIL_H, mat.ceiling);
+      const cy = CEIL_H/2;
+      
+      // walls - NO end wall to allow walking into orientation room copy or chamber
+      wallBox(hallX - HALL.w/2, cy, startZ + HALL.len/2, WALL_T, CEIL_H, HALL.len + 0.4, mat.offWhite);
+      wallBox(hallX + HALL.w/2, cy, startZ + HALL.len/2, WALL_T, CEIL_H, HALL.len + 0.4, mat.offWhite);
 
       // lights
-      for(let i=0;i<9;i++){
-        const t=i/8;
-        const z=startZ+6+t*(HALL.len-12);
-        const p=new THREE.Mesh(new THREE.BoxGeometry(2.6,0.05,0.72), new THREE.MeshStandardMaterial({ color:0xffffff, roughness:0.25, metalness:0.0, emissive:0xffffff, emissiveIntensity:0.24 }));
-        p.position.set(hallX,CEIL_H-0.16,z);
+      for (let i = 0; i < 9; i++) {
+        const t = i/8;
+        const z = startZ + 6 + t * (HALL.len - 12);
+        const p = new THREE.Mesh(
+          new THREE.BoxGeometry(2.6, 0.05, 0.72),
+          new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            roughness: 0.25,
+            metalness: 0.0,
+            emissive: 0xffffff,
+            emissiveIntensity: 0.24
+          })
+        );
+        p.position.set(hallX, CEIL_H - 0.16, z);
         world.add(p);
-        const l=new THREE.PointLight(0xffffff,0.30,24,1.35);
-        l.position.set(hallX,CEIL_H-0.46,z);
+        const l = new THREE.PointLight(0xffffff, 0.30, 24, 1.35);
+        l.position.set(hallX, CEIL_H - 0.46, z);
         scene.add(l);
       }
 
       // doors (staggered)
-      const usable=HALL.len-3.0;
-      const step=usable/(HALL.doors+1);
-      for(let i=0;i<HALL.doors;i++){
-        const z=startZ+7.5+(i+1)*step;
-        const side=(i%2===0)?-1:1;
-        const wallX=hallX+side*(HALL.w/2);
-        const doorX=wallX-side*0.10;
-        const rotY=(side===-1)?Math.PI/2:-Math.PI/2;
+      const usable = HALL.len - 3.0;
+      const step = usable/(HALL.doors + 1);
+      for (let i = 0; i < HALL.doors; i++) {
+        const z = startZ + 7.5 + (i + 1) * step;
+        const side = (i % 2 === 0) ? -1 : 1;
+        const wallX = hallX + side * (HALL.w/2);
+        const doorX = wallX - side * 0.10;
+        const rotY = (side === -1) ? Math.PI/2 : -Math.PI/2;
 
         // frame
-        const frame=new THREE.Mesh(new THREE.BoxGeometry(1.25,1.62,0.10), mat.trim);
-        frame.position.set(doorX,0.81,z);
-        frame.rotation.y=rotY;
+        const frame = new THREE.Mesh(new THREE.BoxGeometry(1.25, 1.62, 0.10), mat.trim);
+        frame.position.set(doorX, 0.81, z);
+        frame.rotation.y = rotY;
         world.add(frame);
 
-        addDoor(doorX-side*0.06, z, rotY, dept.door);
+        addDoor(doorX - side * 0.06, z, rotY, dept.door);
 
         // plaque
-        const label=dept.subs[i]||`ROOM ${i+1}`;
-        const tex=plaqueTex(label);
-        const plaque=new THREE.Mesh(new THREE.PlaneGeometry(0.82,0.30), new THREE.MeshStandardMaterial({ map:tex, roughness:0.65, metalness:0.0 }));
-        plaque.position.set(doorX+Math.cos(rotY)*0.10,1.22,z-Math.sin(rotY)*0.10);
-        plaque.rotation.y=rotY;
+        const label = dept.subs[i] || `ROOM ${i + 1}`;
+        const tex = plaqueTex(label);
+        const plaque = new THREE.Mesh(
+          new THREE.PlaneGeometry(0.82, 0.30),
+          new THREE.MeshStandardMaterial({ map: tex, roughness: 0.65, metalness: 0.0 })
+        );
+        plaque.position.set(doorX + Math.cos(rotY) * 0.10, 1.22, z - Math.sin(rotY) * 0.10);
+        plaque.rotation.y = rotY;
         world.add(plaque);
       }
+      
+      // Build orientation room copy at hallway end
+      const orientCopyZ = endZ + ORIENT.d/2; // Center of orientation copy
+      buildOrientationRoom(orientCopyZ, true, true, false); // isMainRoom=false
 
-      // loop trigger
-      const trigger=new THREE.Box3(
-        new THREE.Vector3(hallX-HALL.w/2+0.4,0,endZ-2.2),
-        new THREE.Vector3(hallX+HALL.w/2-0.4,2.0,endZ-0.2)
+      // loop trigger at hallway end
+      const trigger = new THREE.Box3(
+        new THREE.Vector3(hallX - HALL.w/2 + 0.4, 0, endZ - 2.2),
+        new THREE.Vector3(hallX + HALL.w/2 - 0.4, 2.0, endZ - 0.2)
       );
-      hallwayInfo.push({ deptKey:dept.key, hallX, startZ, endZ, trigger });
+      hallwayInfo.push({ deptKey: dept.key, hallX, startZ, endZ, trigger, orientCopyZ });
     }
 
     // ---- Massive Chamber ----
@@ -741,9 +800,9 @@
       if (chamberBuilt) return;
       chamberBuilt = true;
 
-      const chamberStartZ = LOBBY.d/2 + HALL.len;
+      const chamberStartZ = ORIENT.z + ORIENT.d/2 + HALL.len; // After hallway ends
       const chamberW = 40;
-      const chamberD = CHAMBER_D; // Adjusted depth - chamber spans z=106-132
+      const chamberD = CHAMBER_D;
       const chamberH = 3.2; // taller than hallways for dramatic effect
       const chamberCenterZ = chamberStartZ + chamberD/2;
 
@@ -920,10 +979,11 @@
     }
 
     // ---- Build world ----
-    buildLobby();
+    buildElevatorTransition(); // Corridor from elevator to orientation room
+    buildOrientationRoom(); // Build main orientation room
     for(const d of deptList) buildHallway(d);
     buildElevator();
-    buildMassiveChamber(); // Always build chamber at startup
+    // Don't build chamber yet - it should only appear after all 3 departments visited
     updateCP();
 
     // ---- Input / pointer lock ----
@@ -932,11 +992,11 @@
     let yaw = Math.PI; // face elevator doors
     let pitch = 0;
 
-    // Smooth mouse look targets (restores the "butter" feel)
+    // Smooth mouse look targets
     let yawTarget = yaw;
     let pitchTarget = pitch;
     const MOUSE_SENS = 0.0019;     // smaller = slower
-    const LOOK_SMOOTH = 8.0;       // bigger = snappier (still smooth)
+    const LOOK_SMOOTH = 8;         // bigger = snappier (8 provides smooth mouse feel)
 
     function onMouseMove(e){
       yawTarget   -= (e.movementX || 0) * MOUSE_SENS;
@@ -1113,14 +1173,24 @@ function applyStance(){
 
      // ---- Hall looping ----
     let completionTriggered = false;
+    let lastTriggeredHall = null;
     
     function handleLoops(){
+      let triggerActive = false;
+      
       for(const h of hallwayInfo){
         if(h.trigger.containsPoint(camera.position)){
+          triggerActive = true;
+          
+          // Prevent multiple triggers on same hallway
+          if (lastTriggeredHall === h.deptKey) return;
+          lastTriggeredHall = h.deptKey;
+          
+          // Mark department as visited if not already
           if (!completed.has(h.deptKey)){
             completed.add(h.deptKey);
             saveCompletion();
-            cp.hallKey=h.deptKey;
+            cp.hallKey = h.deptKey;
             updateCP();
           }
           
@@ -1128,38 +1198,35 @@ function applyStance(){
           if(completed.size === 3 && !completionTriggered){
             completionTriggered = true;
             
-            // Teleport to center of chamber
-            const chamberStartZ = LOBBY.d/2 + HALL.len;
-            const chamberCenterZ = chamberStartZ + CHAMBER_D/2;
-            camera.position.set(0, STAND_Y, chamberCenterZ);
-            yaw = Math.PI; // Face back toward hallways
-            yawTarget = yaw;
-            pitch = 0;
-            pitchTarget = 0;
-            vel.set(0,0,0);
+            // Build the massive chamber
+            buildMassiveChamber();
             
-            // Highlight center accent wall with emissive glow
+            // Highlight center accent wall to draw attention
             if (centerAccentWall && centerAccentWall.material) {
               centerAccentWall.material.emissive = new THREE.Color(0x5e5a54);
               centerAccentWall.material.emissiveIntensity = 0.65;
             }
             
-            // Add a special spotlight on the center wall
-            const completionLight = new THREE.SpotLight(0xffffff, 1.2, 30, Math.PI/6, 0.3, 1.5);
-            completionLight.position.set(0, 2.5, chamberCenterZ + 5);
-            completionLight.target.position.set(0, 1.6, chamberStartZ + CHAMBER_D);
-            scene.add(completionLight);
-            scene.add(completionLight.target);
+            // Allow player to naturally walk forward into chamber
+            // No teleportation - they just walk through
             
           } else if (completed.size < 3) {
-            // Teleport back to lobby for the infinite hallway illusion
-            camera.position.set(0, CROUCH_Y, (LOBBY.d/2) - 1.8);
-            yaw=Math.PI;
+            // Teleport back to main orientation room (creates the loop illusion)
+            // Position player at south side of main orientation room, facing north
+            camera.position.set(0, STAND_Y, TELEPORT_Z);
+            yaw = Math.PI; // Face north (into orientation room)
             yawTarget = yaw;
-            vel.set(0,0,0);
+            pitch = 0;
+            pitchTarget = 0;
+            vel.set(0, 0, 0);
           }
           return;
         }
+      }
+      
+      // Reset trigger only if player has left ALL trigger zones
+      if (!triggerActive) {
+        lastTriggeredHall = null;
       }
     }
     // ---- CP shimmer ----
@@ -1216,9 +1283,9 @@ function applyStance(){
 
       tryMove(vel.x * dt, vel.z * dt);
 
-      // hard bounds - extend z to allow chamber access
-      camera.position.x=Math.max(-22,Math.min(22,camera.position.x));
-      camera.position.z=Math.max(-28,Math.min(140,camera.position.z));
+      // Apply world bounds
+      camera.position.x=Math.max(BOUNDS_X_MIN,Math.min(BOUNDS_X_MAX,camera.position.x));
+      camera.position.z=Math.max(BOUNDS_Z_MIN,Math.min(BOUNDS_Z_MAX,camera.position.z));
 
       updateElevDoors(dt);
       if (typeof elev.drawIndicator === 'function') elev.drawIndicator(now);
