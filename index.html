@@ -1,15 +1,16 @@
 // Department completion tracking
+const TOTAL_DEPARTMENTS = 3;
 const completed = new Set();
 
 function handleLoops() {
   // Check each hallway to see if player is at the end
   for (const h of hallways) {
-    if (h.trigger && h.trigger.containsPoint(camera.position)) {
+    if (h && h.trigger && h.deptKey && h.trigger.containsPoint(camera.position)) {
       // Mark this department as visited
       completed.add(h.deptKey);
       
-      // Check if all 3 departments have been visited
-      if (completed.size >= 3) {
+      // Check if all departments have been visited
+      if (completed.size >= TOTAL_DEPARTMENTS) {
         // All departments completed - show the massive chamber
         showMassiveChamber();
       } else {
