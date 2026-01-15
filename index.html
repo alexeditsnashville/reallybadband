@@ -1270,16 +1270,13 @@ function applyStance(){
         if(h.trigger.containsPoint(camera.position)){
           triggerActive = true;
           
-          // Prevent multiple triggers on same hallway
-          if (lastTriggeredHall === h.deptKey) continue;
-          lastTriggeredHall = h.deptKey;
-          
-          // Mark department as visited if not already
-          if (!completed.has(h.deptKey)){
+          // Mark department as visited if not already (and not the last triggered)
+          if (!completed.has(h.deptKey) && lastTriggeredHall !== h.deptKey){
             completed.add(h.deptKey);
             saveCompletion();
             cp.hallKey = h.deptKey;
             updateCP();
+            lastTriggeredHall = h.deptKey;
           }
         }
       }
