@@ -1,18 +1,17 @@
 // Department tracking
+const TOTAL_DEPARTMENTS = 3;
 let visitedDepartments = new Set();
-let currentHallway = 0;
 
 function handleLoops(hallwayNumber) {
   // Mark the current department as visited
   visitedDepartments.add(hallwayNumber);
-  currentHallway = hallwayNumber;
   
-  // Check if all 3 departments have been completed
-  if (visitedDepartments.size >= 3 && hallwayNumber === 3) {
-    // All departments completed, exiting hallway 3 - show massive chamber
+  // Check if all departments have been completed
+  if (visitedDepartments.size >= TOTAL_DEPARTMENTS && hallwayNumber === TOTAL_DEPARTMENTS) {
+    // All departments completed, exiting final hallway - show massive chamber
     showMassiveChamber();
   } else {
-    // Hallways 1-2 or incomplete: teleport back to lobby
+    // Incomplete departments or exiting hallways 1-2: teleport back to lobby
     teleportToLobby();
   }
 }
