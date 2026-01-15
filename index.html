@@ -114,6 +114,12 @@
     const SPRINT = 15.0;  // Updated from 8.5
     const ACCEL = 18.0;
     const DAMP = 11.0;
+    
+    const TELEPORT_OFFSET = 1.5; // Distance from orientation room entrance when teleporting
+    const BOUNDS_X_MIN = -22;
+    const BOUNDS_X_MAX = 22;
+    const BOUNDS_Z_MIN = -28;
+    const BOUNDS_Z_MAX = 150; // Extended to allow chamber exploration
 
     const ELEV = { x:0, z:-19.5, w:2.05, d:1.70 };
     const ORIENT = { x:0, z:5, w:30, d:14 }; // Orientation Room (replaces LOBBY)
@@ -1190,7 +1196,7 @@ function applyStance(){
             // Teleport back to main orientation room (creates the loop illusion)
             // Position player at south side of main orientation room, facing north
             // This makes it appear they've walked into an orientation room copy
-            camera.position.set(0, STAND_Y, ORIENT.z - 7 + 1.5);
+            camera.position.set(0, STAND_Y, ORIENT.z - 7 + TELEPORT_OFFSET);
             yaw = Math.PI; // Face north (into orientation room)
             yawTarget = yaw;
             pitch = 0;
@@ -1257,10 +1263,9 @@ function applyStance(){
 
       tryMove(vel.x * dt, vel.z * dt);
 
-      // hard bounds - extend z to allow chamber access
-      // Orientation room starts at z=-2, hallways go to ~108, chamber extends to ~140
-      camera.position.x=Math.max(-22,Math.min(22,camera.position.x));
-      camera.position.z=Math.max(-28,Math.min(150,camera.position.z));
+      // Apply world bounds
+      camera.position.x=Math.max(BOUNDS_X_MIN,Math.min(BOUNDS_X_MAX,camera.position.x));
+      camera.position.z=Math.max(BOUNDS_Z_MIN,Math.min(BOUNDS_Z_MAX,camera.position.z));
 
       updateElevDoors(dt);
       if (typeof elev.drawIndicator === 'function') elev.drawIndicator(now);
