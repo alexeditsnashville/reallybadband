@@ -937,13 +937,14 @@
     const vel=new THREE.Vector3();
     const wish=new THREE.Vector3();
 
-    function applyStance(){
-      const inElev = isInElevator(camera.position);
+function applyStance(){
+  const inElev = isInElevator(camera.position);
+  const nearElevExit = camera.position.z > ELEV.z && camera.position.z < ELEV.z + 8;
+  const wantCrouch = (inElev || nearElevExit) ? (crouchHold || crouchToggle) : false;
 
       // You can toggle/hold crouch ONLY in the elevator, but once you enter the crawl tunnel
       // we force crouch so you don’t snap-stand the instant you step out of the elevator.
 
-    const wantCrouch = inElev ?  (crouchHold || crouchToggle) : false;
       if(wantCrouch){
         camera.position.y = CROUCH_Y;
         PLAYER_HALF_H = 0.18;
