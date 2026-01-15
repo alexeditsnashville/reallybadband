@@ -597,7 +597,7 @@
       // Crouch head height is ~0.74 (CROUCH_Y 0.56 + PLAYER_HALF_H 0.18).
       // This collider spans ~1.05–1.35 so it blocks standing but allows crouch.
       const tunnelCeilCollider = new THREE.Mesh(
-        new THREE.BoxGeometry(tunnel.w + 0.40, 0.30, tunnel.d + 0.40),
+        new THREE.BoxGeometry(tunnel.w, 0.30, tunnel.d),
         mat.ceiling
       );
       tunnelCeilCollider.visible = false;
