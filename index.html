@@ -989,7 +989,7 @@
     let yawTarget = yaw;
     let pitchTarget = pitch;
     const MOUSE_SENS = 0.0019;     // smaller = slower
-    const LOOK_SMOOTH = 8;         // smaller = snappier (8 provides responsive mouse feel)
+    const LOOK_SMOOTH = 8;         // bigger = snappier (8 provides smooth mouse feel)
 
     function onMouseMove(e){
       yawTarget   -= (e.movementX || 0) * MOUSE_SENS;
@@ -1189,6 +1189,12 @@ function applyStance(){
             
             // Build the massive chamber
             buildMassiveChamber();
+            
+            // Highlight center accent wall to draw attention
+            if (centerAccentWall && centerAccentWall.material) {
+              centerAccentWall.material.emissive = new THREE.Color(0x5e5a54);
+              centerAccentWall.material.emissiveIntensity = 0.65;
+            }
             
             // Allow player to naturally walk forward into chamber
             // No teleportation - they just walk through
