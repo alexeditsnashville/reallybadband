@@ -578,38 +578,7 @@
       backTrim.position.set(lobbyX, f8Y + 0.95, lobbyZ + lobbyD / 2 - 0.08);
       world.add(backTrim);
 
-      // Crouch tunnel immediately outside elevator (no gaps)
-      const tunnel={ x:0, z:ELEV.z+ELEV.d/2+2.05, w:1.35, d:4.2, h:1.05 };
 
-      // Volume used to force crouch while you are in the 7 1/2 crawl tunnel
-      elev.tunnelBox = new THREE.Box3(
-        new THREE.Vector3(tunnel.x - tunnel.w/2 - 0.35, 0, tunnel.z - tunnel.d/2 - 0.30),
-        new THREE.Vector3(tunnel.x + tunnel.w/2 + 0.35, 2.2, tunnel.z + tunnel.d/2 + 0.30)
-      );
-      floorPlane(tunnel.x,tunnel.z,tunnel.w,tunnel.d, mat.offWhite);
-      ceilPlane(tunnel.x,tunnel.z,tunnel.w,tunnel.d, tunnel.h, mat.ceiling);
-      const tcy=tunnel.h/2;
-      wallBox(tunnel.x-tunnel.w/2,tcy,tunnel.z, WALL_T, tunnel.h, tunnel.d, mat.offWhite);
-      wallBox(tunnel.x+tunnel.w/2,tcy,tunnel.z, WALL_T, tunnel.h, tunnel.d, mat.offWhite);
-
-      // Invisible low-ceiling collider: forces crouch to pass into Floor 7 1/2.
-      // Standing head height is ~1.27 (STAND_Y 1.02 + PLAYER_HALF_H 0.25).
-      // Crouch head height is ~0.74 (CROUCH_Y 0.56 + PLAYER_HALF_H 0.18).
-      // This collider spans ~1.05–1.35 so it blocks standing but allows crouch.
-      const tunnelCeilCollider = new THREE.Mesh(
-        new THREE.BoxGeometry(tunnel.w, 0.30, tunnel.d),
-        mat.ceiling
-      );
-      tunnelCeilCollider.visible = false;
-      tunnelCeilCollider.position.set(tunnel.x, tunnel.h + 0.15, tunnel.z);
-      world.add(tunnelCeilCollider);
-      addCollider(tunnelCeilCollider);
-
-      // lintel to keep you crouched
-      const lintel=new THREE.Mesh(new THREE.BoxGeometry(2.6,0.28,0.30), mat.trim);
-      lintel.position.set(0,1.02, ELEV.z+ELEV.d/2+0.55);
-      world.add(lintel);
-      addCollider(lintel);
     }
 
     // ---- Lobby + corridor + hallways ----
@@ -690,7 +659,7 @@
       addHeaderSign('SURVEILLANCE', HALL_X.SURVEILLANCE, northZ-0.24);
       addHeaderSign('PURSUANCE', HALL_X.PURSUANCE, northZ-0.24);
 
-      // corridor from lobby down to tunnel
+      // corridor from lobby down to elevator
       floorPlane(0,-9.0, 4.4, 10.0, mat.offWhite);
       ceilPlane(0,-9.0, 4.4, 10.0, CEIL_H, mat.ceiling);
       wallBox(-2.2,cy,-9.0, WALL_T, CEIL_H, 10.0, mat.offWhite);
@@ -972,11 +941,9 @@
 
     function applyStance(){
       const inElev = isInElevator(camera.position);
-      const inTunnel = (elev.tunnelBox && elev.tunnelBox.containsPoint(camera.position));
 
-      // You can toggle/hold crouch ONLY in the elevator, but once you enter the crawl tunnel
-      // we force crouch so you don’t snap-stand the instant you step out of the elevator.
-      const wantCrouch = inElev ? (crouchHold || crouchToggle) : (inTunnel ? true : false);
+      // You can toggle/hold crouch ONLY in the elevator
+      const wantCrouch = inElev ? (crouchHold || crouchToggle) : false;
 
       if(wantCrouch){
         camera.position.y = CROUCH_Y;
