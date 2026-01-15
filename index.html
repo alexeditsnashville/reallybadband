@@ -1,3 +1,35 @@
+// Department completion tracking
+const completed = new Set();
+
+function handleLoops() {
+  // Check each hallway to see if player is at the end
+  hallways.forEach(h => {
+    if (h.trigger && h.trigger.containsPoint(camera.position)) {
+      // Mark this department as visited
+      completed.add(h.deptKey);
+      
+      // Check if all 3 departments have been visited
+      if (completed.size >= 3) {
+        // All departments completed - show the massive chamber
+        showMassiveChamber();
+      } else {
+        // Not all departments visited - teleport back to lobby seamlessly
+        teleportToLobby();
+      }
+    }
+  });
+}
+
+function teleportToLobby() {
+  // Reset player position to lobby to create seamless loop illusion
+  camera.position.set(0, STAND_Y, 0);
+  yaw = 0;
+  pitch = 0;
+  vel.set(0, 0, 0);
+  crouchToggle = false;
+  crouchHold = false;
+}
+
 function showMassiveChamber(){
   const chamberH = 30.5;
   const chamberW = 20;
