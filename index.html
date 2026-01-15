@@ -722,7 +722,7 @@
       ceilPlane(hallX, startZ + HALL.len/2, HALL.w, HALL.len + 0.4, CEIL_H, mat.ceiling);
       const cy = CEIL_H/2;
       
-      // walls - NO end wall to allow walking into orientation room copy or chamber
+      // walls - NO end wall to allow walking into shared orientation room copy
       wallBox(hallX - HALL.w/2, cy, startZ + HALL.len/2, WALL_T, CEIL_H, HALL.len + 0.4, mat.offWhite);
       wallBox(hallX + HALL.w/2, cy, startZ + HALL.len/2, WALL_T, CEIL_H, HALL.len + 0.4, mat.offWhite);
 
@@ -776,17 +776,13 @@
         plaque.rotation.y = rotY;
         world.add(plaque);
       }
-      
-      // Build orientation room copy at hallway end
-      const orientCopyZ = endZ + ORIENT.d/2; // Center of orientation copy
-      buildOrientationRoom(orientCopyZ, true, true, false); // isMainRoom=false
 
-      // loop trigger at hallway end
+      // Mark where this hallway ends (trigger for completion tracking)
       const trigger = new THREE.Box3(
         new THREE.Vector3(hallX - HALL.w/2 + 0.4, 0, endZ - 2.2),
         new THREE.Vector3(hallX + HALL.w/2 - 0.4, 2.0, endZ - 0.2)
       );
-      hallwayInfo.push({ deptKey: dept.key, hallX, startZ, endZ, trigger, orientCopyZ });
+      hallwayInfo.push({ deptKey: dept.key, hallX, startZ, endZ, trigger });
     }
 
     // ---- Massive Chamber ----
@@ -798,7 +794,10 @@
       if (chamberBuilt) return;
       chamberBuilt = true;
 
-      const chamberStartZ = ORIENT.z + ORIENT.d/2 + HALL.len; // After hallway ends
+      // Chamber starts AFTER the shared orientation room copy at the hallway ends
+      // Formula: main orientation north wall + hallway length + orientation copy depth
+      // = (ORIENT.z + ORIENT.d/2) + HALL.len + ORIENT.d
+      const chamberStartZ = ORIENT.z + ORIENT.d/2 + HALL.len + ORIENT.d;
       const chamberW = 40;
       const chamberD = CHAMBER_D;
       const chamberH = 3.2; // taller than hallways for dramatic effect
@@ -980,6 +979,13 @@
     buildElevatorTransition(); // Corridor from elevator to orientation room
     buildOrientationRoom(); // Build main orientation room
     for(const d of deptList) buildHallway(d);
+    
+    // Build shared orientation room copy at the end of all three hallways
+    // This creates the "infinite loop" illusion - all hallways lead to the same copy
+    const hallEndZ = ORIENT.z + ORIENT.d/2 + HALL.len; // Where hallways end
+    const orientCopyZ = hallEndZ + ORIENT.d/2; // Center of copy
+    buildOrientationRoom(orientCopyZ, true, true, false); // isMainRoom=false
+    
     buildElevator();
     // Don't build chamber yet - it should only appear after all 3 departments visited
     updateCP();
@@ -1169,7 +1175,7 @@ function applyStance(){
       elev.right.position.x = ELEV.x + hatchW/4 + openAmt*(hatchW*0.30);
     }
 
-     // ---- Hall looping ----
+     // ---- Hall completion tracking ----
     let completionTriggered = false;
     let lastTriggeredHall = null;
     
@@ -1196,7 +1202,7 @@ function applyStance(){
           if(completed.size === 3 && !completionTriggered){
             completionTriggered = true;
             
-            // Build the massive chamber
+            // Build the massive chamber (it appears beyond the shared orientation copy)
             buildMassiveChamber();
             
             // Highlight center accent wall to draw attention
@@ -1204,20 +1210,11 @@ function applyStance(){
               centerAccentWall.material.emissive = new THREE.Color(0x5e5a54);
               centerAccentWall.material.emissiveIntensity = 0.65;
             }
-            
-            // Allow player to naturally walk forward into chamber
-            // No teleportation - they just walk through
-            
-          } else if (completed.size < 3) {
-            // Teleport back to main orientation room (creates the loop illusion)
-            // Position player at south side of main orientation room, facing north
-            camera.position.set(0, STAND_Y, TELEPORT_Z);
-            yaw = Math.PI; // Face north (into orientation room)
-            yawTarget = yaw;
-            pitch = 0;
-            pitchTarget = 0;
-            vel.set(0, 0, 0);
           }
+          
+          // No teleportation - player walks naturally through the shared orientation copy
+          // The copy creates the infinite loop illusion by showing C/S/P hallways again
+          
           return;
         }
       }
