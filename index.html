@@ -241,6 +241,21 @@
             tunnelCreated: JSON.parse(localStorage.getItem('completedHallways') || '[]').length >= 3
         };
 
+        // World Layout Constants
+        const WORLD_LAYOUT = {
+            ELEVATOR_Z: 0,
+            ENTRANCE_Z: 10,
+            ORIENTATION_1_Z: 10,
+            HALLWAY_1_START_Z: 3,
+            ORIENTATION_2_Z: -100,
+            HALLWAY_2_START_Z: -107,
+            ORIENTATION_3_Z: -210,
+            HALLWAY_3_START_Z: -217,
+            ORIENTATION_4_Z: -320,
+            TUNNEL_START_Z: -324,
+            CHAMBER_Z: -368
+        };
+
         // Three.js Setup
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x0a0a0a);
@@ -684,28 +699,28 @@
 
         // Build world
         let counterDoorPos;
-        createOrientationRoom(10);
-        createHallway('PURSUANCE', -10, 3);
-        createHallway('SURVEILLANCE', 0, 3);
-        createHallway('COMPLIANCE', 10, 3);
+        createOrientationRoom(WORLD_LAYOUT.ORIENTATION_1_Z);
+        createHallway('PURSUANCE', -10, WORLD_LAYOUT.HALLWAY_1_START_Z);
+        createHallway('SURVEILLANCE', 0, WORLD_LAYOUT.HALLWAY_1_START_Z);
+        createHallway('COMPLIANCE', 10, WORLD_LAYOUT.HALLWAY_1_START_Z);
 
-        createOrientationRoom(-100);
-        createHallway('PURSUANCE', -10, -107);
-        createHallway('SURVEILLANCE', 0, -107);
-        createHallway('COMPLIANCE', 10, -107);
+        createOrientationRoom(WORLD_LAYOUT.ORIENTATION_2_Z);
+        createHallway('PURSUANCE', -10, WORLD_LAYOUT.HALLWAY_2_START_Z);
+        createHallway('SURVEILLANCE', 0, WORLD_LAYOUT.HALLWAY_2_START_Z);
+        createHallway('COMPLIANCE', 10, WORLD_LAYOUT.HALLWAY_2_START_Z);
 
-        createOrientationRoom(-210);
-        createHallway('PURSUANCE', -10, -217);
-        createHallway('SURVEILLANCE', 0, -217);
-        createHallway('COMPLIANCE', 10, -217);
+        createOrientationRoom(WORLD_LAYOUT.ORIENTATION_3_Z);
+        createHallway('PURSUANCE', -10, WORLD_LAYOUT.HALLWAY_3_START_Z);
+        createHallway('SURVEILLANCE', 0, WORLD_LAYOUT.HALLWAY_3_START_Z);
+        createHallway('COMPLIANCE', 10, WORLD_LAYOUT.HALLWAY_3_START_Z);
 
         // Third set leads to tunnel
         if (gameState.completedHallways.length >= 3) {
-            createDarkTunnel(0, -324);
-            const chamberData = createMassiveChamber(-368);
+            createDarkTunnel(0, WORLD_LAYOUT.TUNNEL_START_Z);
+            const chamberData = createMassiveChamber(WORLD_LAYOUT.CHAMBER_Z);
             counterDoorPos = chamberData.doorPosition;
         } else {
-            createOrientationRoom(-320);
+            createOrientationRoom(WORLD_LAYOUT.ORIENTATION_4_Z);
         }
 
         // Input handling
@@ -835,8 +850,9 @@
                 // Trigger tunnel creation dynamically
                 if (gameState.completedHallways.length === 3 && !gameState.tunnelCreated) {
                     gameState.tunnelCreated = true;
-                    createDarkTunnel(0, -324);
-                    createMassiveChamber(-368);
+                    createDarkTunnel(0, WORLD_LAYOUT.TUNNEL_START_Z);
+                    const chamberData = createMassiveChamber(WORLD_LAYOUT.CHAMBER_Z);
+                    counterDoorPos = chamberData.doorPosition;
                 }
             }
 
@@ -885,7 +901,17 @@
 
         function restartGame() {
             localStorage.removeItem('completedHallways');
-            location.reload();
+            // Reset to elevator position
+            camera.position.set(0, 1.6, 0);
+            camera.rotation.set(0, 0, 0);
+            gameState.completedHallways = [];
+            gameState.inElevator = true;
+            gameState.elevatorDoorsOpen = false;
+            document.getElementById('formOverlay').classList.remove('active');
+            document.getElementById('successMessage').classList.remove('active');
+            document.getElementById('formContent').style.display = 'block';
+            document.getElementById('phoneInput').value = '';
+            // Note: Full scene rebuild would require page reload, but player can explore from elevator
         }
 
         function exploreRandom() {
